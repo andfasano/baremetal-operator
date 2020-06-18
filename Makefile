@@ -163,7 +163,7 @@ tools:
 
 .PHONY: wait-for-ironic
 wait-for-ironic:
-	go build -o build/_output/bin/wat-for-ironic cmd/wait-for-ironic/main.go
+	go build -o build/_output/bin/wait-for-ironic cmd/wait-for-ironic/main.go
 
 .PHONY: deploy
 deploy:
