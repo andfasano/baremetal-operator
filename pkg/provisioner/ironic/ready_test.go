@@ -99,7 +99,14 @@ func TestProvisionerIsReady(t *testing.T) {
 			prov, err := newProvisionerWithSettings(makeHost(), bmc.Credentials{}, nil,
 				tc.ironic.Endpoint(), auth, tc.inspector.Endpoint(), auth,
 			)
+			if err != nil {
+				t.Fatalf("could not create provisioner: %s", err)
+			}
+
 			ready, err := prov.IsReady()
+			if err != nil {
+				t.Fatalf("could not determine ready state: %s", err)
+			}
 
 			if tc.ironic != nil {
 				assert.Equal(t, tc.expectedIronicCalls, tc.ironic.Requests)
