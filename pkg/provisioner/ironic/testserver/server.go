@@ -7,52 +7,28 @@ import (
 	"testing"
 )
 
+// New returns a MockServer
 func New(t *testing.T, name string) *MockServer {
+	mux := http.NewServeMux()
 	return &MockServer{
 		t:    t,
 		name: name,
+		mux:  mux,
 	}
 }
 
+// MockServer is a simple http testing server
 type MockServer struct {
-	t         *testing.T
-	name      string
-	Requests  string
-	server    *httptest.Server
-	drivers   string
-	errorCode int
+	t            *testing.T
+	mux          *http.ServeMux
+	name         string
+	Requests     string
+	FullRequests []*http.Request
+	server       *httptest.Server
+	errorCode    int
 }
 
-func (m *MockServer) SetErrorCode(code int) *MockServer {
-	m.errorCode = code
-
-	return m
-}
-
-func (m *MockServer) AddDrivers() *MockServer {
-	m.drivers = `
-	{
-		"drivers": [{
-			"hosts": [
-			  "master-2.ostest.test.metalkube.org"
-			],
-			"links": [
-			  {
-				"href": "http://[fd00:1101::3]:6385/v1/drivers/fake-hardware",
-				"rel": "self"
-			  },
-			  {
-				"href": "http://[fd00:1101::3]:6385/drivers/fake-hardware",
-				"rel": "bookmark"
-			  }
-			],
-			"name": "fake-hardware"
-		}]
-	}
-	`
-	return m
-}
-
+// Endpoint returns the URL to the server
 func (m *MockServer) Endpoint() string {
 	if m == nil || m.server == nil {
 		// The consumer of this method expects something valid, but
@@ -60,45 +36,69 @@ func (m *MockServer) Endpoint() string {
 		return "https://ironic.test/v1/"
 	}
 	response := m.server.URL + "/v1/"
-	m.t.Logf("%s: endpoint: %s/", m.name, response)
+	m.t.Logf("%s: endpoint: %s", m.name, response)
 	return response
 }
 
-func (m *MockServer) logRequest(r *http.Request, msg string) {
-	m.t.Logf("%s: %s %s", m.name, msg, r.URL)
+func (m *MockServer) logRequest(r *http.Request, response string) {
+	m.t.Logf("%s: %s %s -> %s", m.name, r.Method, r.URL, response)
 	m.Requests += r.RequestURI + ";"
+	m.FullRequests = append(m.FullRequests, r)
 }
 
 func (m *MockServer) handleNoResponse(w http.ResponseWriter, r *http.Request) {
-	m.logRequest(r, "no response")
 	if m.errorCode != 0 {
 		http.Error(w, "An error", m.errorCode)
 		return
 	}
 }
 
-func (m *MockServer) handleDrivers(w http.ResponseWriter, r *http.Request) {
-	m.logRequest(r, "drivers")
-	if m.errorCode != 0 {
-		http.Error(w, "An error", m.errorCode)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, m.drivers)
-}
-
-func (m *MockServer) Start() *MockServer {
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", m.handleNoResponse)
-	mux.HandleFunc("/v1", m.handleNoResponse)
-	mux.HandleFunc("/v1/drivers", m.handleDrivers)
-
-	m.server = httptest.NewServer(mux)
-
+// AddHandler attaches a generic handler function to a request URL pattern
+func (m *MockServer) AddHandler(pattern string, handlerFunc http.HandlerFunc) *MockServer {
+	m.t.Logf("%s: adding handler for %s", m.name, pattern)
+	m.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		m.logRequest(r, "(custom)")
+		handlerFunc(w, r)
+	})
 	return m
 }
 
+// AddNotFoundHandler attaches a 404 error handler to a request URL pattern
+func (m *MockServer) AddNotFoundHandler(pattern string) *MockServer {
+	m.AddErrorResponse(pattern, http.StatusNotFound)
+	return m
+}
+
+// AddResponse attaches a handler function that returns the given
+// payload from requests to the URL pattern
+func (m *MockServer) AddResponse(pattern string, payload string) *MockServer {
+	m.t.Logf("%s: adding response handler for %s", m.name, pattern)
+	m.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		m.logRequest(r, payload)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, payload)
+	})
+	return m
+}
+
+// AddErrorResponse attaches a handler function that returns the given
+// error code from requests to the URL pattern
+func (m *MockServer) AddErrorResponse(pattern string, errorCode int) *MockServer {
+	m.t.Logf("%s: adding error response handler for %s", m.name, pattern)
+	m.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		m.logRequest(r, fmt.Sprintf("%d", errorCode))
+		http.Error(w, "An error", errorCode)
+	})
+	return m
+}
+
+// Start runs the server
+func (m *MockServer) Start() *MockServer {
+	m.server = httptest.NewServer(m.mux)
+	return m
+}
+
+// Stop closes the server down
 func (m *MockServer) Stop() {
 	m.server.Close()
 }
