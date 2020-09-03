@@ -53,8 +53,8 @@ func (m *MockServer) handleNoResponse(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// AddHandler attaches a generic handler function to a request URL pattern
-func (m *MockServer) AddHandler(pattern string, handlerFunc http.HandlerFunc) *MockServer {
+// Handler attaches a generic handler function to a request URL pattern
+func (m *MockServer) Handler(pattern string, handlerFunc http.HandlerFunc) *MockServer {
 	m.t.Logf("%s: adding handler for %s", m.name, pattern)
 	m.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		m.logRequest(r, "(custom)")
@@ -63,15 +63,15 @@ func (m *MockServer) AddHandler(pattern string, handlerFunc http.HandlerFunc) *M
 	return m
 }
 
-// AddNotFoundHandler attaches a 404 error handler to a request URL pattern
-func (m *MockServer) AddNotFoundHandler(pattern string) *MockServer {
-	m.AddErrorResponse(pattern, http.StatusNotFound)
+// NotFound attaches a 404 error handler to a request URL pattern
+func (m *MockServer) NotFound(pattern string) *MockServer {
+	m.ErrorResponse(pattern, http.StatusNotFound)
 	return m
 }
 
-// AddResponse attaches a handler function that returns the given
-// payload from requests to the URL pattern
-func (m *MockServer) AddResponse(pattern string, payload string) *MockServer {
+// Response attaches a handler function that returns the given payload
+// from requests to the URL pattern
+func (m *MockServer) Response(pattern string, payload string) *MockServer {
 	m.t.Logf("%s: adding response handler for %s", m.name, pattern)
 	m.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		m.logRequest(r, payload)
@@ -81,9 +81,9 @@ func (m *MockServer) AddResponse(pattern string, payload string) *MockServer {
 	return m
 }
 
-// AddErrorResponse attaches a handler function that returns the given
+// ErrorResponse attaches a handler function that returns the given
 // error code from requests to the URL pattern
-func (m *MockServer) AddErrorResponse(pattern string, errorCode int) *MockServer {
+func (m *MockServer) ErrorResponse(pattern string, errorCode int) *MockServer {
 	m.t.Logf("%s: adding error response handler for %s", m.name, pattern)
 	m.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		m.logRequest(r, fmt.Sprintf("%d", errorCode))

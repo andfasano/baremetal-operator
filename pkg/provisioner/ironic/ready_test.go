@@ -11,8 +11,8 @@ import (
 )
 
 func buildServer(t *testing.T, name string, v1 string, drivers string) *testserver.MockServer {
-	return testserver.New(t, name).AddResponse("/v1", v1).
-		AddResponse("/v1/drivers", drivers)
+	return testserver.New(t, name).Response("/v1", v1).
+		Response("/v1/drivers", drivers)
 }
 
 func TestProvisionerIsReady(t *testing.T) {
@@ -76,7 +76,7 @@ func TestProvisionerIsReady(t *testing.T) {
 		{
 			name: "IronicNotOk",
 			ironic: testserver.New(t, "ironic").
-				AddErrorResponse("/v1", http.StatusInternalServerError),
+				ErrorResponse("/v1", http.StatusInternalServerError),
 			inspector:           testserver.New(t, "inspector"),
 			expectedIsReady:     false,
 			expectedIronicCalls: "/v1;",
@@ -84,7 +84,7 @@ func TestProvisionerIsReady(t *testing.T) {
 		{
 			name: "IronicNotOkAndNotExpected",
 			ironic: testserver.New(t, "ironic").
-				AddErrorResponse("/v1", http.StatusBadGateway),
+				ErrorResponse("/v1", http.StatusBadGateway),
 			inspector:           testserver.New(t, "inspector"),
 			expectedIsReady:     false,
 			expectedIronicCalls: "/v1;",
@@ -93,7 +93,7 @@ func TestProvisionerIsReady(t *testing.T) {
 			name:   "InspectorNotOk",
 			ironic: buildServer(t, "ironic", "{}", driverResponse),
 			inspector: testserver.New(t, "inspector").
-				AddErrorResponse("/v1", http.StatusInternalServerError),
+				ErrorResponse("/v1", http.StatusInternalServerError),
 			expectedIsReady:        false,
 			expectedIronicCalls:    "/v1;/v1/drivers;",
 			expectedInspectorCalls: "/v1;",
