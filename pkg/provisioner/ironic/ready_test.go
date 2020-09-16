@@ -51,7 +51,7 @@ func TestProvisionerIsReady(t *testing.T) {
 		{
 			name:                   "IsReady",
 			ironic:                 buildServer(t, "ironic", "{}", driverResponse),
-			inspector:              buildServer(t, "ironic-inspector", "{}", driverResponse),
+			inspector:              testserver.New(t, "inspector").Response("/v1", "{}"),
 			expectedIronicCalls:    "/v1;/v1/drivers;",
 			expectedInspectorCalls: "/v1;",
 			expectedIsReady:        true,
