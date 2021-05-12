@@ -2000,3 +2000,16 @@ func TestInvalidBMHCanBeDeleted(t *testing.T) {
 		return host.Status.Provisioning.State == metal3v1alpha1.StateDeleting && len(host.Finalizers) == 0
 	})
 }
+
+func Test1kSNO(t *testing.T) {
+
+	host := newDefaultNamedHost("sno01001", t)
+
+	host.Annotations = map[string]string{
+		metal3v1alpha1.DetachedAnnotation: "true",
+		inspectAnnotationPrefix:           "disabled",
+	}
+
+	r := newTestReconciler(host)
+	waitForProvisioningState(t, r, host, metal3v1alpha1.StateProvisioned)
+}
