@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -2001,15 +2002,38 @@ func TestInvalidBMHCanBeDeleted(t *testing.T) {
 	})
 }
 
-func Test1kSNO(t *testing.T) {
-
-	host := newDefaultNamedHost("sno01001", t)
+func newSNOHost(name string, t *testing.T) *metal3v1alpha1.BareMetalHost {
+	host := newDefaultNamedHost(name, t)
 
 	host.Annotations = map[string]string{
 		metal3v1alpha1.DetachedAnnotation: "true",
 		inspectAnnotationPrefix:           "disabled",
 	}
+	host.Spec.Image = &metal3v1alpha1.Image{
+		DiskFormat: pointer.StringPtr("live-iso"),
+		URL:        "http://10.19.130.7/rhcos-4.7.7-x86_64-live.x86_64.iso",
+	}
+	host.Spec.BMC.DisableCertificateVerification = true
+	host.Spec.AutomatedCleaningMode = metal3v1alpha1.CleaningModeDisabled
+	host.Spec.Online = true
+	host.Status.PoweredOn = true
 
-	r := newTestReconciler(host)
-	waitForProvisioningState(t, r, host, metal3v1alpha1.StateProvisioned)
+	return host
+}
+
+func waitForDetachedHost(t *testing.T, r *BareMetalHostReconciler, host *metal3v1alpha1.BareMetalHost) {
+	tryReconcile(t, r, host,
+		func(host *metal3v1alpha1.BareMetalHost, result reconcile.Result) bool {
+			return host.Status.Provisioning.State == metal3v1alpha1.StateProvisioned && host.Status.OperationalStatus == metal3v1alpha1.OperationalStatusDetached
+		},
+	)
+}
+
+func Test1kSNO(t *testing.T) {
+
+	for i := 0; i < 1000; i++ {
+		host := newSNOHost(fmt.Sprintf("sno01%04d", i), t)
+		r := newTestReconciler(host)
+		waitForDetachedHost(t, r, host)
+	}
 }
