@@ -22,6 +22,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/pkg/profile"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -144,6 +145,8 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "BareMetalHost")
 		os.Exit(1)
 	}
+
+	defer profile.Start(profile.MemProfile, profile.ProfilePath("/tmp/memprof"), profile.NoShutdownHook).Stop()
 
 	setupChecks(mgr)
 

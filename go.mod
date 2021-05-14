@@ -8,6 +8,7 @@ require (
 	github.com/gophercloud/gophercloud v0.16.0
 	github.com/metal3-io/baremetal-operator/apis v0.0.0
 	github.com/pkg/errors v0.9.1
+	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.7.1
 	github.com/stretchr/testify v1.7.0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489
